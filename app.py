@@ -1,18 +1,17 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 from datetime import datetime
 
-# --- Configuração da Página e Tema ---
+# --- 1. Configuração Otimizada para Mobile ---
 st.set_page_config(
     page_title="Danki Francês Pro",
     page_icon="🇫🇷",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="centered",  # 'centered' funciona melhor em celulares que 'wide' para flashcards
+    initial_sidebar_state="collapsed" # Começa fechado para não tapar a tela no celular
 )
 
-# --- CSS Profissional (Glassmorphism & Neon) ---
+# --- 2. CSS Responsivo (Media Queries) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap');
@@ -27,30 +26,29 @@ st.markdown("""
     .flashcard-container {
         background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
         border: 1px solid #374151;
-        border-radius: 24px;
-        padding: 60px 20px;
+        border-radius: 20px;
+        padding: 60px 20px; /* Padding padrão Desktop */
         text-align: center;
-        box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         position: relative;
         overflow: hidden;
-        margin-bottom: 30px;
+        margin-bottom: 20px;
     }
 
-    /* Efeito de brilho no topo do cartão */
+    /* Brilho no topo */
     .flashcard-container::before {
         content: '';
         position: absolute;
-        top: 0; left: 0; right: 0; height: 6px;
+        top: 0; left: 0; right: 0; height: 4px;
         background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
     }
 
-    /* Tipografia */
+    /* Tipografia Desktop */
     .word-fr {
         font-family: 'JetBrains Mono', monospace;
         font-size: 56px;
         font-weight: 800;
         color: #f3f4f6;
-        text-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
         margin: 20px 0;
     }
 
@@ -60,10 +58,31 @@ st.markdown("""
         font-weight: 600;
         background: rgba(16, 185, 129, 0.1);
         display: inline-block;
-        padding: 8px 24px;
+        padding: 10px 20px;
         border-radius: 50px;
         border: 1px solid rgba(16, 185, 129, 0.2);
         animation: slideUp 0.4s ease-out;
+    }
+
+    /* --- REGRAS ESPECÍFICAS PARA CELULAR (Telas menores que 600px) --- */
+    @media only screen and (max-width: 600px) {
+        .flashcard-container {
+            padding: 30px 10px; /* Menos espaço em branco */
+            margin-bottom: 15px;
+        }
+        .word-fr {
+            font-size: 32px; /* Fonte menor para não quebrar linha */
+        }
+        .word-pt {
+            font-size: 20px;
+            padding: 5px 15px;
+        }
+        /* Ajuste fino para os botões do Streamlit ocuparem mais espaço */
+        .stButton button {
+            width: 100%;
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
     }
 
     @keyframes slideUp {
@@ -71,24 +90,20 @@ st.markdown("""
         to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Badges e Infos */
     .rank-badge {
         font-size: 12px;
         text-transform: uppercase;
-        letter-spacing: 2px;
         color: #9ca3af;
-        margin-bottom: 10px;
+        margin-bottom: 5px;
     }
-
-    /* Botões Customizados via CSS hack não são ideais no Streamlit, 
-       mas vamos estilizar as métricas */
-    div[data-testid="stMetricValue"] {
-        font-size: 24px;
-        color: #e5e7eb;
+    
+    /* Remove padding excessivo do topo padrão do Streamlit */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 5rem;
     }
 </style>
 """, unsafe_allow_html=True)
-
 
 # --- Carregamento de Dados ---
 @st.cache_data
@@ -101,165 +116,125 @@ def load_data():
         st.error(f"Erro ao carregar base de dados: {e}")
         return pd.DataFrame()
 
-
 df = load_data()
 if df.empty: st.stop()
 
-# --- Gerenciamento de Estado (Session State) ---
+# --- Estado ---
 if 'current_card' not in st.session_state:
     st.session_state.current_card = df.sample(1).iloc[0]
 if 'show_answer' not in st.session_state:
     st.session_state.show_answer = False
 if 'history' not in st.session_state:
-    # Formato: {'time': timestamp, 'result': 'acerto'/'erro', 'xp': int}
     st.session_state.history = []
 if 'xp' not in st.session_state:
     st.session_state.xp = 0
 if 'learned_words' not in st.session_state:
     st.session_state.learned_words = set()
 
-
-# --- Funções Lógicas ---
+# --- Funções ---
 def process_answer(known):
-    # Lógica de Gamificação
     xp_gain = 10 if known else 2
     st.session_state.xp += xp_gain
-
+    
     result_type = 'Conhecido' if known else 'Estudar'
     if known:
         st.session_state.learned_words.add(st.session_state.current_card['Francês'])
-
-    # Registra no histórico para o gráfico
+    
     st.session_state.history.append({
         'time': datetime.now().strftime("%H:%M:%S"),
         'xp_total': st.session_state.xp,
         'tipo': result_type
     })
-
-    # Próxima carta
+    
     st.session_state.current_card = df.sample(1).iloc[0]
     st.session_state.show_answer = False
 
-
-# --- Layout: Sidebar (Perfil do Usuário) ---
+# --- Sidebar ---
 with st.sidebar:
-    st.header("👤 Perfil do Estudante")
-
-    # Cálculo de Nível
+    st.header("👤 Perfil")
     level = int(st.session_state.xp / 100) + 1
     progress_to_next = (st.session_state.xp % 100) / 100.0
-
+    
     c1, c2 = st.columns(2)
     c1.metric("Nível", level)
-    c2.metric("XP Total", st.session_state.xp)
-
-    st.write(f"Progresso p/ Nível {level + 1}")
+    c2.metric("XP", st.session_state.xp)
     st.progress(progress_to_next)
-
     st.divider()
+    difficulty = st.slider("Rank Máximo", 100, 1000, 1000, 100)
 
-    st.subheader("⚙️ Configuração")
-    difficulty = st.slider("Filtro de Rank (Top X)", 100, 1000, 1000, 100)
-    # Filtra o dataset globalmente para o sorteio, se quiser implementar
-    # df_active = df[df['Rank'] <= difficulty]
+# --- Área Principal ---
+tab_treino, tab_stats, tab_banco = st.tabs(["🔥 Treino", "📈 Stats", "📚 Lista"])
 
-# --- Layout: Área Principal (Tabs) ---
-tab_treino, tab_stats, tab_banco = st.tabs(["🔥 Área de Treino", "📈 Evolução & Stats", "📚 Dicionário"])
-
-# === TAB 1: FLASHCARD ===
+# === TAB 1: FLASHCARD (Responsivo) ===
 with tab_treino:
-    col_center, _ = st.columns(
-        [1, 0.01])  # Truque para centralizar visualmente se usar 'centered', mas aqui estamos em 'wide'
-
     card = st.session_state.current_card
-
-    # HTML do Cartão
+    
+    # Cartão HTML
     html_card = f"""
     <div class="flashcard-container">
-        <div class="rank-badge">Palavra #{card['Rank']} • Frequência Alta</div>
+        <div class="rank-badge">Rank #{card['Rank']}</div>
         <div class="word-fr">{card['Francês']}</div>
     """
     if st.session_state.show_answer:
         html_card += f'<div class="word-pt">{card["Português"]}</div>'
     else:
-        html_card += '<div style="height: 45px; opacity: 0.5; color: #6b7280;">(Pense na tradução...)</div>'
-
+        html_card += '<div style="margin-top:20px; opacity: 0.5; color: #6b7280; font-size: 14px;">(Toque para revelar)</div>'
+    
     html_card += "</div>"
     st.markdown(html_card, unsafe_allow_html=True)
-
-    # Controles
-    c1, c2, c3, c4 = st.columns([1, 2, 2, 1])
-
+    
+    # --- 3. Botões Responsivos ---
+    # Removemos as colunas vazias ([1,2,2,1]) que quebram o mobile.
+    # Usamos apenas 2 colunas diretas ou 1 coluna cheia.
+    
     if not st.session_state.show_answer:
-        with c2:
-            st.write("")  # Spacer
-        with c3:
-            if st.button("👁️ REVELAR RESPOSTA", type="primary", use_container_width=True):
-                st.session_state.show_answer = True
-                st.rerun()
+        # Botão único grande para revelar
+        if st.button("👁️ REVELAR RESPOSTA", type="primary", use_container_width=True):
+            st.session_state.show_answer = True
+            st.rerun()
     else:
-        # Botões de Feedback
-        with c2:
-            if st.button("❌ Não sei ainda (+2 XP)", use_container_width=True):
+        # Dois botões lado a lado (50% cada)
+        col_no, col_yes = st.columns(2)
+        
+        with col_no:
+            if st.button("❌ Não sei", use_container_width=True):
                 process_answer(known=False)
                 st.rerun()
-        with c3:
-            if st.button("✅ Já sei! (+10 XP)", type="primary", use_container_width=True):
+        
+        with col_yes:
+            if st.button("✅ Já sei!", type="primary", use_container_width=True):
                 process_answer(known=True)
                 st.rerun()
 
-# === TAB 2: ESTATÍSTICAS (GRÁFICOS) ===
+# === TAB 2: STATS ===
 with tab_stats:
-    st.subheader("Seu Desempenho na Sessão Atual")
-
+    st.subheader("Desempenho")
     if len(st.session_state.history) > 0:
-        # Cria DataFrame do Histórico
         hist_df = pd.DataFrame(st.session_state.history)
         hist_df['index'] = range(1, len(hist_df) + 1)
-
-        # 1. Gráfico de Evolução de XP (Área)
+        
+        # Gráfico simplificado para mobile (remove titulos grandes)
         fig_evolucao = px.area(
-            hist_df,
-            x='index',
-            y='xp_total',
-            title="Crescimento de XP por Jogada",
-            labels={'index': 'Número de Flashcards', 'xp_total': 'XP Acumulado'},
+            hist_df, x='index', y='xp_total', 
+            title="Evolução XP",
             color_discrete_sequence=['#8b5cf6']
         )
-        fig_evolucao.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="white")
-        st.plotly_chart(fig_evolucao, use_container_width=True)
-
-        # 2. Métricas Lado a Lado
-        col_m1, col_m2 = st.columns(2)
-
-        # Gráfico de Pizza (Acertos vs Erros)
-        counts = hist_df['tipo'].value_counts().reset_index()
-        counts.columns = ['Status', 'Qtd']
-
-        fig_pizza = px.pie(
-            counts,
-            values='Qtd',
-            names='Status',
-            title="Precisão da Sessão",
-            color='Status',
-            color_discrete_map={'Conhecido': '#10b981', 'Estudar': '#ef4444'},
-            hole=0.5
+        fig_evolucao.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)", 
+            plot_bgcolor="rgba(0,0,0,0)", 
+            font_color="white",
+            margin=dict(l=20, r=20, t=40, b=20), # Margens menores
+            height=300 # Altura fixa menor para caber na tela
         )
-        fig_pizza.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color="white")
-
-        with col_m1:
-            st.plotly_chart(fig_pizza, use_container_width=True)
-
-        with col_m2:
-            st.metric("Total Revisado", len(hist_df))
-            st.metric("Palavras Dominadas", len(st.session_state.learned_words))
-            accuracy = (len(hist_df[hist_df['tipo'] == 'Conhecido']) / len(hist_df)) * 100
-            st.metric("Taxa de Precisão", f"{accuracy:.1f}%")
-
+        st.plotly_chart(fig_evolucao, use_container_width=True)
+        
+        c1, c2 = st.columns(2)
+        c1.metric("Revistos", len(hist_df))
+        accuracy = (len(hist_df[hist_df['tipo'] == 'Conhecido']) / len(hist_df)) * 100
+        c2.metric("Precisão", f"{accuracy:.0f}%")
     else:
-        st.info("Comece a estudar na aba 'Área de Treino' para gerar gráficos!")
+        st.info("Comece a treinar!")
 
-# === TAB 3: BANCO DE DADOS ===
+# === TAB 3: BANCO ===
 with tab_banco:
-    st.subheader("📚 Todos os Verbos")
     st.dataframe(df, use_container_width=True, hide_index=True)
