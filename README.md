@@ -1,47 +1,11 @@
-# 🇫🇷 Anki Frances - French Study System
+# Anki French Study
 
-Structured Anki flashcards system for efficient French language learning.
+Anki flashcards study system for learning French. Pre-built deck and automation tools for language acquisition.
 
-## 🎯 Features
+## Tech Stack
 
-- ✅ Curated French vocabulary decks
-- ✅ Spaced repetition optimization
-- ✅ Audio pronunciation support
-- ✅ Example sentences
-- ✅ Progress tracking
+- Python, Anki
 
-## 📋 Requirements
+## License
 
-- Anki Desktop 2.1+
-- AnkiMobile/AnkiDroid (optional)
-
-## 🔧 Installation
-
-1. Clone this repository
-2. Import .apkg files from decks/ folder into Anki
-
-## 💡 Usage
-
-1. Open Anki and select your French deck
-2. Review daily cards
-3. Follow spaced repetition schedule
-
-## 📚 Learning Path
-
-| Level | Focus | Cards |
-|-------|-------|-------|
-| A1 | Basic Vocabulary | 500 |
-| A2 | Grammar Basics | 300 |
-| B1 | Intermediate | 400 |
-| B2 | Advanced | 350 |
-
-## 📄 License
-
-MIT License
-
-## 👤 Author
-
-**CostaJr007**
-
----
-⭐ Bon courage avec votre apprentissage du français!
+MIT
